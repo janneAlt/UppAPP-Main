@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum ContestStatus {
+  DRAFT
+  SUBMISSION
+  VOTING
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(MEMBER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  photos Photo[]
+  votes  Vote[]
+}
+
+model Contest {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  status      ContestStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+
+  photos Photo[]
+  votes  Vote[]
+}
+
+model Photo {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  filePath    String
+  createdAt   DateTime @default(now())
+
+  contestId String
+  contest   Contest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  votes Vote[]
+
+  @@index([contestId])
+  @@index([userId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  photoId String
+  photo   Photo  @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  contestId String
+  contest   Contest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contestId])
+  @@index([photoId])
+  @@index([contestId])
+}
