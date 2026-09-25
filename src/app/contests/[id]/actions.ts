@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { savePhotoFile } from "@/lib/uploads";
-import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES, photoUploadSchema } from "@/lib/validations";
+import { verifyPhotoBlob } from "@/lib/uploads";
+import { photoUploadSchema } from "@/lib/validations";
 
 export type UploadPhotoState = {
   errors?: Partial<Record<"title" | "description" | "file" | "form", string[]>>;
@@ -33,18 +33,20 @@ export async function uploadPhoto(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const file = formData.get("photo");
-  if (!(file instanceof File) || file.size === 0) {
+  // The photo itself was uploaded from the browser straight to Vercel Blob;
+  // only its URL is sent here.
+  const filePath = formData.get("photoUrl");
+  if (typeof filePath !== "string" || !filePath) {
     return { errors: { file: ["Välj en bildfil."] } };
   }
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-    return { errors: { file: ["Endast JPEG, PNG eller WEBP stöds."] } };
+  const blobError = await verifyPhotoBlob(contestId, filePath);
+  if (blobError) {
+    return { errors: { file: [blobError] } };
   }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return { errors: { file: ["Filen är för stor (max 10 MB)."] } };
+  const existing = await prisma.photo.findFirst({ where: { filePath }, select: { id: true } });
+  if (existing) {
+    return { errors: { file: ["Bilden har redan skickats in."] } };
   }
-
-  const filePath = await savePhotoFile(contestId, file);
 
   await prisma.photo.create({
     data: {
