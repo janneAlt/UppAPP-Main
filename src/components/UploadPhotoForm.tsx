@@ -1,13 +1,54 @@
 "use client";
 
 import { useActionState } from "react";
+import { upload } from "@vercel/blob/client";
 import { uploadPhoto, type UploadPhotoState } from "@/app/contests/[id]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES, photoUploadSchema } from "@/lib/validations";
 
 const initialState: UploadPhotoState = {};
 
 export function UploadPhotoForm({ contestId }: { contestId: string }) {
-  const action = uploadPhoto.bind(null, contestId);
+  // Uploads the file straight from the browser to Vercel Blob, then sends only
+  // its URL to the server action (Vercel functions reject bodies over 4.5 MB).
+  async function action(prevState: UploadPhotoState, formData: FormData): Promise<UploadPhotoState> {
+    const parsed = photoUploadSchema.safeParse({
+      title: formData.get("title"),
+      description: formData.get("description"),
+    });
+    if (!parsed.success) {
+      return { errors: parsed.error.flatten().fieldErrors };
+    }
+
+    const file = formData.get("photo");
+    if (!(file instanceof File) || file.size === 0) {
+      return { errors: { file: ["Välj en bildfil."] } };
+    }
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      return { errors: { file: ["Endast JPEG, PNG eller WEBP stöds."] } };
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      return { errors: { file: ["Filen är för stor (max 10 MB)."] } };
+    }
+
+    let url: string;
+    try {
+      const blob = await upload(`contests/${contestId}/${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/photos/upload",
+        clientPayload: JSON.stringify({ contestId }),
+        contentType: file.type,
+      });
+      url = blob.url;
+    } catch (error) {
+      return { errors: { form: [(error as Error).message || "Uppladdningen misslyckades."] } };
+    }
+
+    formData.delete("photo");
+    formData.set("photoUrl", url);
+    return uploadPhoto(contestId, prevState, formData);
+  }
+
   const [state, formAction] = useActionState(action, initialState);
   const errors = state.errors ?? {};
 
