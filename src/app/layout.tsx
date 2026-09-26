@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PinkElephants } from "@/components/PinkElephants";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-slate-50">
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
+        <PinkElephants />
       </body>
     </html>
   );

@@ -24,3 +24,33 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Easter egg: see src/components/PinkElephants.tsx */
+.pink-elephants {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  overflow: hidden;
+  animation: pink-elephants-fade 6.5s ease-in-out forwards;
+}
+
+.pink-elephant {
+  position: absolute;
+  bottom: 8%;
+  animation: pink-elephant-dance 0.9s ease-in-out infinite alternate;
+  filter: drop-shadow(0 6px 8px rgb(231 90 155 / 0.35));
+}
+
+@keyframes pink-elephant-dance {
+  0% { transform: translateY(0) rotate(-10deg); }
+  50% { transform: translateY(-40px) rotate(0deg); }
+  100% { transform: translateY(-10px) rotate(10deg); }
+}
+
+@keyframes pink-elephants-fade {
+  0% { opacity: 0; transform: translateX(-30%); }
+  12% { opacity: 1; transform: translateX(0); }
+  85% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(30%); }
+}
